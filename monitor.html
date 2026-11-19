@@ -1,0 +1,474 @@
+<!doctype html>
+<html lang="th"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Agent Monitor · ตลาดเมล็ดกาแฟ</title>
+<style>
+/* same tokens, fonts and parts as the market's /trade page, so the two read as one product */
+:root{--bg:#f5f0e6;--card:#fbf8f2;--line:#ddd3c2;--ink:#2a1e17;--dim:#6f5f52;--accent:#a64b1f;--blue:#2e5e7e;
+--ok:#2e7d4f;--warn:#a64b1f;--bad:#b3261e;--soft:#f3e2d6}
+@font-face{font-family:Sarabun;src:url(/fonts/Sarabun-Regular.ttf);font-weight:400;font-display:swap}
+@font-face{font-family:Sarabun;src:url(/fonts/Sarabun-SemiBold.ttf);font-weight:600;font-display:swap}
+@font-face{font-family:Sarabun;src:url(/fonts/Sarabun-Bold.ttf);font-weight:700;font-display:swap}
+@font-face{font-family:Prompt;src:url(/fonts/Prompt-SemiBold.ttf);font-weight:600;font-display:swap}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:Sarabun,"Leelawadee UI",Tahoma,sans-serif;font-size:16px;line-height:1.45}
+h1,h2,.tm,.stat b,.mode b{font-family:Prompt,Sarabun,sans-serif;font-weight:600}
+header{position:sticky;top:0;z-index:5;background:var(--ink);color:#f5f0e6;padding:10px 16px;display:flex;flex-wrap:wrap;gap:8px 20px;align-items:center}
+header h1{font-size:18px;margin:0;font-weight:700}
+header .sp{flex:1}
+.ph{font-weight:700;color:#e3a27a}.tm{font-size:24px;font-weight:700;font-variant-numeric:tabular-nums}
+.tm.paused{color:#ff9b8f}
+.alive{font-size:13px;padding:2px 10px;border-radius:999px;background:#3d2d22}
+.alive.ok{color:#9fd8b0}.alive.late{color:#ffcf8f}.alive.dead{color:#ff9b8f}
+main{max-width:1760px;margin:0 auto;padding:16px;display:grid;grid-template-columns:minmax(0,2.1fr) minmax(0,1fr);gap:16px}
+@media (max-width:980px){main{grid-template-columns:1fr}}
+.col{display:flex;flex-direction:column;gap:16px;min-width:0}
+section{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;min-width:0}
+section h2{font-size:16px;margin:0 0 10px;display:flex;justify-content:space-between;gap:8px;align-items:baseline;flex-wrap:wrap}
+section h2 small{font-weight:400;color:var(--dim);font-size:13px}
+table{border-collapse:collapse;width:100%}
+th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:13px;color:var(--dim);font-weight:600}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+.wrap{overflow-x:auto}
+button{font:inherit;padding:6px 12px;border-radius:8px;border:1px solid var(--accent);background:transparent;color:var(--accent);cursor:pointer}
+.muted{color:var(--dim)}.small{font-size:13px}
+.st{font-weight:700}.st.ACCEPTED{color:var(--ok)}.st.PARTIAL{color:var(--blue)}.st.OUTBID,.st.ABOVE_LIMIT,.st.SPEC_MISMATCH{color:var(--bad)}
+.tag{display:inline-block;padding:1px 8px;border-radius:999px;font-size:12px;background:var(--soft);color:var(--accent)}
+.tag.SPECIALTY{background:#efe3f3;color:#6d3a7d}.tag.COMMERCIAL{background:#e2edf5;color:var(--blue)}.tag.INSTANT{background:#f6ead8;color:#8a5a12}
+.stats{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.stats.four{grid-template-columns:repeat(4,1fr)}
+@media (max-width:640px){.stats.four{grid-template-columns:repeat(2,1fr)}}
+.stat{background:#fff;border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+.stat b{display:block;font-size:20px;font-variant-numeric:tabular-nums}
+.stat.bad b{color:var(--bad)}.stat.warn b{color:var(--warn)}.stat.ok b{color:var(--ok)}
+.banner{background:var(--soft);border-left:6px solid var(--accent);border-radius:8px;padding:10px 14px}
+.banner.bad{background:#fbe9e7;border-color:var(--bad)}.banner.ok{background:#e6f2ea;border-color:var(--ok)}
+pre{background:#2a1e17;color:#f5f0e6;padding:10px;border-radius:8px;overflow:auto;font-size:12px;max-height:380px;white-space:pre-wrap;margin:0}
+.hide{display:none!important}
+
+/* tactic: the agent's stance this round */
+.mode{display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+.mode b{font-size:30px;line-height:1;padding:8px 16px;border-radius:10px;color:#fff}
+.m-ATTACK{background:var(--ok)}.m-NORMAL{background:var(--blue)}.m-SAFE{background:#b7791f}.m-RESCUE{background:var(--bad)}
+.mode p{margin:0;max-width:60ch}
+.meter{margin:12px 0 4px}
+.meter .bar{position:relative;height:14px;background:#efe6d6;border-radius:7px;overflow:hidden}
+.meter .need{position:absolute;inset:0 auto 0 0;background:var(--accent);opacity:.85}
+.meter .left{position:absolute;top:-3px;bottom:-3px;width:3px;background:var(--ink)}
+.meter .lab{display:flex;justify-content:space-between;font-size:13px;color:var(--dim);margin-top:4px}
+.chips{display:flex;gap:4px;flex-wrap:wrap}
+.chip{min-width:46px;padding:4px 6px;border-radius:6px;font-size:12px;text-align:center;color:#fff;line-height:1.25}
+.chip small{display:block;opacity:.9;font-size:11px}
+.chip.none{background:#d8cdbb;color:var(--dim)}
+.cal{display:flex;gap:3px;flex-wrap:wrap}
+.cal span{padding:2px 7px;border-radius:5px;font-size:12px;background:#efe6d6}
+.cal span.fest{background:#f6ead8;color:#8a5a12;font-weight:700}
+.cal span.now{outline:2px solid var(--ink)}
+.cal span.late{background:#ece4e0;color:#7a4b3a}
+
+.ctl{grid-column:1/-1;display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr) minmax(0,1.1fr);gap:16px}
+@media (max-width:1100px){.ctl{grid-template-columns:1fr}}
+.chk{display:flex;gap:10px;padding:6px 0;border-bottom:1px solid var(--line);font-size:14px}
+.chk b{min-width:118px;font-weight:600}.chk .dot{width:10px;height:10px;border-radius:50%;margin-top:6px;flex:none}
+.dot.ok{background:var(--ok)}.dot.warn{background:#b7791f}.dot.bad{background:var(--bad)}.dot.wait{background:#c9bca8}
+.form{display:grid;grid-template-columns:minmax(110px,auto) 1fr;gap:6px 10px;align-items:center;font-size:14px}
+.form input,.form select{font:inherit;padding:5px 8px;border:1px solid var(--line);border-radius:6px;background:#fff;width:100%}
+.form small{grid-column:2;color:var(--dim);font-size:12px;margin-top:-4px}
+.btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;align-items:center}
+.btn{padding:7px 14px;border-radius:8px;border:1px solid var(--accent);background:var(--accent);color:#fff;cursor:pointer;font:inherit}
+.btn.ghost{background:transparent;color:var(--accent)}.btn.bad{background:var(--bad);border-color:var(--bad)}
+.btn.ok{background:var(--ok);border-color:var(--ok)}
+.state{display:inline-block;padding:2px 10px;border-radius:999px;font-size:13px;background:#efe6d6;font-weight:400}
+.state.on{background:#e6f2ea;color:var(--ok)}.state.off{background:#fbe9e7;color:var(--bad)}
+.sum{display:flex;gap:14px;flex-wrap:wrap;font-size:14px;margin:0 0 8px}
+.sum span{display:flex;gap:6px;align-items:center}
+.kv{display:grid;grid-template-columns:minmax(90px,auto) 1fr;gap:4px 10px;font-size:14px}
+.kv b{font-weight:600;color:var(--dim)}.kv span{overflow-wrap:anywhere}
+dialog{border:1px solid var(--line);border-radius:14px;padding:0;background:var(--card);color:var(--ink);width:min(640px,calc(100vw - 32px));max-height:calc(100vh - 48px);box-shadow:0 18px 50px rgba(42,30,23,.28)}
+dialog::backdrop{background:rgba(42,30,23,.45)}
+dialog .hd{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--card);z-index:1}
+dialog .hd h3{margin:0;font-size:17px}
+dialog .bd{padding:14px 18px;overflow:auto}
+dialog .ft{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;padding:12px 18px;border-top:1px solid var(--line);position:sticky;bottom:0;background:var(--card)}
+dialog .x{border:0;font-size:22px;line-height:1;padding:2px 8px;color:var(--dim)}
+dialog .warnbox{background:#fbe9e7;border-left:5px solid var(--bad);border-radius:8px;padding:10px 12px;font-size:14px;margin:0 0 10px}
+dialog input.typed{font:inherit;padding:6px 10px;border:1px solid var(--line);border-radius:6px;width:100%}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.out{background:#2a1e17;color:#f5f0e6;padding:10px;border-radius:8px;font-size:12px;max-height:220px;overflow:auto;white-space:pre-wrap;margin:10px 0 0}
+</style></head>
+<body>
+<header>
+  <h1>Agent Monitor</h1><span id="where" class="small"></span>
+  <span class="sp"></span>
+  <span><span class="ph" id="phase">–</span> <span id="round" class="small"></span></span>
+  <span class="tm" id="timer">--:--</span>
+  <span class="alive" id="alive">–</span>
+</header>
+<main>
+<div class="ctl">
+  <section>
+    <h2>ตรวจความพร้อม <small id="chkTime"></small></h2>
+    <div class="sum" id="chkSum"><span class="muted">ยังไม่ได้ตรวจ</span></div>
+    <div id="checks"></div>
+    <div class="btns"><button class="btn" onclick="runChecks()">ตรวจใหม่</button><button class="btn ghost" onclick="openDlg('dlgChk')">ดูทุกข้อ</button></div>
+  </section>
+  <section>
+    <h2>ค่าตั้ง (.env) <small id="cfgWhere"></small></h2>
+    <div class="kv" id="cfgSum"><span class="muted">กำลังโหลด…</span></div>
+    <div class="btns"><button class="btn" onclick="openCfg()">แก้ค่าตั้ง</button></div>
+  </section>
+  <section>
+    <h2>Agent <span class="state" id="agState">–</span></h2>
+    <div class="btns" style="margin-top:0">
+      <button class="btn ok" onclick="agStart()">เริ่ม agent</button>
+      <button class="btn bad" onclick="agStop()">หยุด agent</button>
+      <button class="btn ghost" onclick="openDlg('dlgPack')">ส่งงาน (pack.py)</button>
+      <label class="small" style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="agForever"> เล่นต่อเนื่อง (เฉพาะตลาดฝึก)</label>
+    </div>
+    <pre class="out" id="agOut">ยังไม่ได้เริ่ม agent จากหน้านี้</pre>
+  </section>
+</div>
+<dialog id="dlgChk">
+  <div class="hd"><h3>ผลตรวจทุกข้อ</h3><button class="x" onclick="closeDlg(this)" aria-label="ปิด">×</button></div>
+  <div class="bd" id="checksAll"></div>
+  <div class="ft"><button class="btn ghost" onclick="closeDlg(this)">ปิด</button><button class="btn" onclick="runChecks()">ตรวจใหม่</button></div>
+</dialog>
+<dialog id="dlgCfg">
+  <div class="hd"><h3>แก้ค่าตั้ง (.env)</h3><button class="x" onclick="closeDlg(this)" aria-label="ปิด">×</button></div>
+  <div class="bd"><p class="small muted" style="margin:0 0 10px">key ใส่ได้อย่างเดียว หน้านี้ไม่แสดงค่า เว้นว่าง = ใช้ค่าเดิม ค่าใหม่มีผลกับ agent ที่เริ่มหลังบันทึก</p>
+    <div class="form" id="cfg"></div><p class="small muted" id="cfgNote" style="margin:10px 0 0"></p></div>
+  <div class="ft"><button class="btn ghost" onclick="closeDlg(this)">ยกเลิก</button><button class="btn" onclick="saveCfg()">บันทึกแล้วตรวจใหม่</button></div>
+</dialog>
+<dialog id="dlgPack">
+  <div class="hd"><h3>ส่งงาน (pack.py)</h3><button class="x" onclick="closeDlg(this)" aria-label="ปิด">×</button></div>
+  <div class="bd">
+    <p class="small" style="margin:0 0 10px">ส่งเมื่อทีมงานเรียก ภายใน 10 นาทีหลังปิดตลาด ลองสร้าง zip ก่อนเพื่อดูรายการไฟล์</p>
+    <div class="warnbox">ส่งจริงได้ครั้งเดียวต่อการเรียก พิมพ์ <b>SEND</b> ในช่องด้านล่างเพื่อเปิดปุ่มส่ง</div>
+    <input class="typed" id="packTyped" placeholder="พิมพ์ SEND" autocomplete="off" oninput="$('packSend').disabled = this.value !== 'SEND'">
+    <pre class="out" id="packOut" style="display:none"></pre>
+  </div>
+  <div class="ft"><button class="btn ghost" onclick="closeDlg(this)">ปิด</button><button class="btn ghost" onclick="pack(false)">สร้าง handin.zip (ยังไม่ส่ง)</button><button class="btn bad" id="packSend" disabled onclick="pack(true)">ส่งงานให้ตลาด</button></div>
+</dialog>
+<dialog id="dlgAsk">
+  <div class="hd"><h3 id="askTitle"></h3><button class="x" onclick="closeDlg(this)" aria-label="ปิด">×</button></div>
+  <div class="bd"><p id="askText" style="margin:0"></p></div>
+  <div class="ft"><button class="btn ghost" onclick="closeDlg(this)">ยกเลิก</button><button class="btn" id="askOk"></button></div>
+</dialog>
+<div class="col">
+  <div id="banner" class="banner hide"></div>
+
+  <section>
+    <h2>กลยุทธ์ของ agent รอบนี้ <small id="tacRound"></small></h2>
+    <div class="mode"><b id="modeTag" class="m-NORMAL">–</b><p id="modeWhy" class="muted">รอ agent ส่งข้อเสนอรอบแรก (ต้องเปิด TACTIC=1)</p></div>
+    <div class="stats four" id="riskStats"></div>
+    <div class="meter" id="meter"></div>
+  </section>
+
+  <section>
+    <h2>โหมดและผลขายรายรอบ <small>สีคือโหมด · ตัวเลขคือกระสอบที่ขายได้ / เสนอ</small></h2>
+    <div class="chips" id="chips"></div>
+    <div class="wrap" style="margin-top:12px"><table id="rounds"></table></div>
+  </section>
+
+  <section>
+    <h2>ข้อเสนอที่เปิดอยู่ <small id="offNote"></small></h2>
+    <div class="wrap"><table id="offers"></table></div>
+  </section>
+
+  <section>
+    <h2>บันทึกของ agent <small id="logFile"></small></h2>
+    <pre id="events"></pre>
+  </section>
+</div>
+
+<div class="col">
+  <section>
+    <h2>ผลการขายของทีม</h2>
+    <div class="stats" id="sales"></div>
+  </section>
+  <section>
+    <h2>ราคาต่อผู้ซื้อ <small>เพดานที่เคยโดน ABOVE_LIMIT และ k ที่จะใช้ต่อ</small></h2>
+    <div class="wrap"><table id="buyers"></table></div>
+  </section>
+  <section>
+    <h2>ล็อตของฉัน</h2>
+    <div class="wrap"><table id="lots"></table></div>
+  </section>
+  <section>
+    <h2>ปฏิทินตลาด</h2>
+    <div class="cal" id="cal"></div>
+  </section>
+  <section>
+    <h2>ค่าตั้งของ agent <small>ไม่แสดง key</small></h2>
+    <div class="wrap"><table id="env"></table></div>
+    <p class="small" style="margin:10px 0 0"><button onclick="llmCheck()">ทดสอบ LLM gateway</button> <span id="llm" class="muted"></span></p>
+  </section>
+</div>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const num = (v, d = 2) => v == null ? '–' : Number(v).toLocaleString('th-TH', {maximumFractionDigits: d});
+const pct = v => v == null ? '–' : Math.round(v * 100) + '%';
+const PHASE = {WAITING:'รอเริ่ม', SETUP:'เตรียมตัว', APPRAISAL:'ประเมินมูลค่า', ROUND_OPEN:'เปิดรับข้อเสนอ', ROUND_CLEARING:'จับคู่', CLOSED:'ปิดตลาด'};
+const MODE = {ATTACK:'บุก', NORMAL:'ปกติ', SAFE:'ระวัง', RESCUE:'กู้สถานการณ์'};
+const MODE_COLOR = {ATTACK:'var(--ok)', NORMAL:'var(--blue)', SAFE:'#b7791f', RESCUE:'var(--bad)'};
+let D = null, timerEnd = null, paused = false;
+
+// only this game's events: the log keeps every game (and restarts) appended, so start after the last new_game
+let GE = [];
+function gameEvents() {
+  let i = D.events.length - 1;
+  while (i >= 0 && D.events[i].event !== 'new_game') i--;
+  GE = i >= 0 ? D.events.slice(i) : D.events;
+}
+function lastEvent(name, pred) { for (let i = GE.length - 1; i >= 0; i--) if (GE[i].event === name && (!pred || pred(GE[i]))) return GE[i]; return null; }
+
+function render() {
+  const st = D.state.ok ? D.state.data : null;
+  $('where').textContent = (D.env.MARKET_URL || '') + (D.competition ? ' · ตลาดแข่ง' : '');
+  const b = $('banner');
+  if (!D.state.ok) { b.className = 'banner bad'; b.textContent = 'อ่านสถานะตลาดไม่ได้: ' + D.state.error; }
+  else if (D.competition) { b.className = 'banner'; b.textContent = 'ตลาดแข่ง: หน้านี้อ่านอย่างเดียว ข้อเสนอทั้งหมดต้องมาจาก agent'; }
+  else b.className = 'banner hide';
+  if (!st) return;
+  gameEvents();
+  $('phase').textContent = PHASE[st.phase] || st.phase;
+  const r = st.round;
+  $('round').textContent = r ? (r.kind === 'practice' ? 'รอบซ้อม ' + r.round_id : `รอบ ${r.number}/${r.of}`) + (r.calendar && r.calendar !== 'ปกติ' ? ' · ' + r.calendar : '') : '';
+  paused = !!st.paused; $('timer').classList.toggle('paused', paused);
+  timerEnd = st.seconds_left == null ? null : Date.now() + st.seconds_left * 1000;
+  alive(st); tactic(st); rounds(); offers(st); sales(st); lots(st); calendar(st); env(); events();
+}
+
+function alive(st) {
+  const last = GE.length ? GE[GE.length - 1] : null;
+  const age = last ? (Date.now() - new Date(last.time).getTime()) / 1000 : null;
+  const sent = lastEvent('offers_sent');
+  const rid = st.round && st.round.round_id;
+  let cls = 'ok', txt = 'agent ทำงาน';
+  if (!last) { cls = 'dead'; txt = 'ยังไม่มี log ของ agent'; }
+  else if (st.phase === 'ROUND_OPEN' && (!sent || sent.round !== rid) && st.seconds_left != null && st.seconds_left < 60) { cls = 'dead'; txt = 'รอบนี้ agent ยังไม่ส่ง'; }
+  else if (age > 300 && st.phase !== 'CLOSED') { cls = 'late'; txt = `log ล่าสุด ${Math.round(age / 60)} นาทีก่อน`; }
+  $('alive').className = 'alive ' + cls; $('alive').textContent = txt;
+}
+
+function tactic(st) {
+  const ev = lastEvent('offers_sent', e => e.tactic), t = ev && ev.tactic;
+  if (!t) {
+    $('riskStats').innerHTML = ''; $('meter').innerHTML = ''; $('tacRound').textContent = '';
+    $('modeTag').className = 'm-NORMAL'; $('modeTag').textContent = '–';
+    const any = lastEvent('offers_sent');
+    $('modeWhy').textContent = any ? 'รอบล่าสุดไม่มีข้อมูลกลยุทธ์ (TACTIC=0 หรือไม่มีของให้ขาย)' : 'เกมนี้ agent ยังไม่ส่งข้อเสนอรอบแรก';
+    return;
+  }
+  $('tacRound').textContent = 'ตัดสินใจรอบ ' + ev.round;
+  $('modeTag').className = 'm-' + t.mode; $('modeTag').textContent = MODE[t.mode] || t.mode;
+  const left = st.round && st.round.kind === 'real' ? st.round.of - st.round.number + 1 : null;
+  const why = {
+    ATTACK: `ของเหลือน้อยเมื่อเทียบกับเวลา ขายครบได้ใน ${num(t.need, 1)} รอบ จึงขอราคาสูงขึ้น`,
+    NORMAL: 'ขายตามจังหวะ ใช้ราคาที่ปรับจากผลรอบก่อนของผู้ซื้อแต่ละราย',
+    SAFE: t.drought ? 'รอบก่อนขายไม่ได้ ลดราคาลงเล็กน้อยและเติมให้เต็มโควตา' : 'ของเหลือมากเมื่อเทียบกับโควตาที่เหลือ ลดราคาลงเล็กน้อยและเติมให้เต็มโควตา',
+    RESCUE: t.drought >= 2 ? `ขายไม่ได้ ${t.drought} รอบติด ลดราคาลงเพื่อให้ขายออก` : 'ของเหลือเกินกว่าโควตาที่เหลือจะขายหมด ลดราคาลงและยอมขายต่ำถึง 0.82'}[t.mode];
+  $('modeWhy').textContent = why;
+  const s = (label, val, cls, hint) => `<div class="stat ${cls || ''}" title="${esc(hint || '')}">${label}<b>${val}</b></div>`;
+  $('riskStats').innerHTML = [
+    s('ของเหลือ', `${t.stock} กระสอบ`), s('โควตาต่อรอบ', `${t.cap} กระสอบ`),
+    s('อัตราขายออก', pct(t.rate), t.rate < 0.5 ? 'bad' : t.rate < 0.75 ? 'warn' : 'ok', 'กระสอบที่ขายได้ / ที่เสนอ (รอบล่าสุดมีน้ำหนักมากกว่า)'),
+    s('ขายไม่ได้ติดกัน', `${t.drought} รอบ`, t.drought >= 2 ? 'bad' : t.drought ? 'warn' : ''),
+    s('ต้องใช้อีก', `${num(t.need, 1)} รอบ`, t.spare < 0 ? 'bad' : t.spare < 1 ? 'warn' : '', 'ที่อัตราขายออกตอนนี้'),
+    s('รอบที่เหลือ', left == null ? '–' : `${left} รอบ`),
+    s('คาดว่าค้าง', pct(t.unsold), t.unsold > 0.1 ? 'bad' : t.unsold > 0 ? 'warn' : 'ok', 'ส่วนของสต็อกที่จะเหลือขายได้แค่ 0.80 × TV ถ้าขายแบบนี้ต่อไป'),
+    s('ถ้ารอบนี้ขายไม่ออก', `ค้าง ${pct(t.if_miss)}`, t.if_miss > 0.1 ? 'bad' : t.if_miss > 0 ? 'warn' : 'ok', 'โควตาไม่ทบไปรอบหน้า รอบที่พลาดคือหายไปเลย')].join('');
+  if (left) {
+    const scale = Math.max(left, t.need) * 1.1;
+    $('meter').innerHTML = `<div class="bar"><div class="need" style="width:${Math.min(100, t.need / scale * 100)}%"></div>
+      <div class="left" style="left:${left / scale * 100}%"></div></div>
+      <div class="lab"><span>แถบส้ม: รอบที่ต้องใช้ขายให้หมด ${num(t.need, 1)}</span><span>เส้นดำ: รอบที่เหลือ ${left}</span></div>`;
+  } else $('meter').innerHTML = '';
+}
+
+function rounds() {
+  const res = {}, sent = {};
+  for (const e of GE) { if (e.event === 'round_result') res[e.round] = e; if (e.event === 'offers_sent') sent[e.round] = e; }
+  const ids = [...new Set([...Object.keys(sent), ...Object.keys(res)])].filter(x => /^[PR]\d+$/.test(x))
+    .sort((a, b) => (a[0] === b[0] ? +a.slice(1) - +b.slice(1) : a[0] === 'P' ? -1 : 1));
+  $('chips').innerHTML = ids.map(id => { const t = sent[id] && sent[id].tactic, r = res[id];
+    const bg = t ? MODE_COLOR[t.mode] : null;
+    return `<div class="chip${bg ? '' : ' none'}" style="${bg ? 'background:' + bg : ''}" title="${esc(t ? MODE[t.mode] : 'ไม่มีข้อมูลโหมด')}">${id}<small>${r ? num(r.sold_kg / 60, 0) + '/' + num(r.offered_kg / 60, 0) : '…'}</small></div>`; }).join('')
+    || '<span class="muted">ยังไม่มีรอบที่ส่ง</span>';
+  const rows = ids.slice().reverse().map(id => { const r = res[id], s = sent[id], t = s && s.tactic;
+    const stx = r ? Object.entries(r.statuses || {}).map(([k, v]) => `<span class="st ${k}">${k}${v > 1 ? ' ×' + v : ''}</span>`).join(' ') : '<span class="muted">รอผล</span>';
+    return `<tr><td>${id}</td><td>${t ? MODE[t.mode] : '–'}</td><td>${esc(s ? s.source : '–')}</td>
+      <td class="n">${r ? num(r.offered_kg / 60, 0) : s ? num(s.kg / 60, 0) : '–'}</td><td class="n">${r ? num(r.sold_kg / 60, 0) : '–'}</td>
+      <td class="n">${r && r.k_sold ? num(r.k_sold, 3) : '–'}</td><td class="n">${r && r.revenue ? num(r.revenue, 0) : '–'}</td><td>${stx}</td></tr>`; }).join('');
+  $('rounds').innerHTML = `<tr><th>รอบ</th><th>โหมด</th><th>มาจาก</th><th class="n">เสนอ</th><th class="n">ขายได้</th><th class="n">k ที่ขาย</th><th class="n">รายได้</th><th>ผล</th></tr>` + rows;
+}
+
+function offers(st) {
+  const o = st.my_open_offers || [], rf = Object.fromEntries((st.rfqs || []).map(q => [q.rfq_id, q]));
+  $('offNote').textContent = st.capacity_left_kg == null ? '' : `เสนอได้อีก ${num(st.capacity_left_kg / 60, 0)} จาก ${num(st.round_capacity_kg / 60, 0)} กระสอบ`;
+  $('offers').innerHTML = o.length ? `<tr><th>RFQ</th><th>ผู้ซื้อ</th><th>ล็อต</th><th class="n">กระสอบ</th><th class="n">บาท/กก.</th><th class="n">k</th></tr>` +
+    o.map(x => { const q = rf[x.rfq_id] || {}, tv = D.tv && D.tv[x.lot_id];
+      return `<tr><td>${esc(x.rfq_id)}</td><td>${esc(q.buyer || '')} <span class="tag ${esc(q.buyer_type)}">${esc(q.buyer_type || '')}</span></td><td>${esc(x.lot_id)}</td>
+        <td class="n">${num(x.kg / 60, 0)}</td><td class="n">${num(x.price_per_kg)}</td><td class="n">${tv ? num(x.price_per_kg / tv, 3) : '–'}</td></tr>`; }).join('')
+    : `<tr><td class="muted">${st.phase === 'ROUND_OPEN' ? 'agent ยังไม่ส่งข้อเสนอรอบนี้' : 'ไม่มีข้อเสนอเปิดอยู่'}</td></tr>`;
+}
+
+function sales(st) {
+  const s = st.standings || {};
+  $('sales').innerHTML = [['รายได้ (บาท)', num(s.revenue_thb, 0)], ['ขายแล้ว', num((s.kg_sold || 0) / 60, 0) + ' กระสอบ'],
+    ['เหลือ', num((s.kg_remaining || 0) / 60, 0) + ' กระสอบ'], ['PR ถ้าปิดตอนนี้', D.pr_now == null ? '–' : num(D.pr_now, 3)]]
+    .map(([k, v]) => `<div class="stat">${k}<b>${v}</b></div>`).join('');
+  const t = (lastEvent('offers_sent', e => e.tactic) || {}).tactic;
+  const caps = (t && t.caps) || {}, nk = (t && t.next_k) || {};
+  const names = [...new Set([...Object.keys(nk), ...Object.keys(caps)])].sort();
+  $('buyers').innerHTML = names.length ? `<tr><th>ผู้ซื้อ</th><th class="n">k ต่อไป</th><th class="n">เพดาน</th></tr>` +
+    names.map(n => `<tr><td>${esc(n)}</td><td class="n">${num(nk[n], 3)}</td><td class="n">${caps[n] != null ? '<span class="st ABOVE_LIMIT">' + num(caps[n], 3) + '</span>' : '–'}</td></tr>`).join('')
+    : '<tr><td class="muted">ยังไม่มีผลรอบที่ใช้ปรับราคา</td></tr>';
+}
+
+function lots(st) {
+  $('lots').innerHTML = `<tr><th>ล็อต</th><th>ชื้น / เสีย / ขนาด</th><th class="n">TV ที่ประเมิน</th><th class="n">เหลือ</th></tr>` +
+    (st.lots || []).map(l => `<tr><td>${esc(l.lot_id)}</td><td class="small">${num(l.sample.moisture_pct, 1)} / ${num(l.sample.defect_pct, 1)} / ${esc(l.sample.screen)}</td>
+      <td class="n">${num(D.tv && D.tv[l.lot_id])}</td><td class="n">${num(l.kg_available / 60, 0)}/${num(l.kg_total / 60, 0)}</td></tr>`).join('');
+}
+
+function calendar(st) {
+  if (!D.calendar.ok) return;
+  const rows = D.calendar.data.calendar || [], tl = (D.calendar.data.rules || {}).timeline || {};
+  const lab = {};
+  rows.forEach(c => { const rr = String(c.rounds || `${c.from}-${c.to}`).split('-').map(Number); for (let i = rr[0]; i <= (rr[1] || rr[0]); i++) lab[i] = c.label; });
+  const cur = st.round && st.round.kind === 'real' ? st.round.number : null;
+  $('cal').innerHTML = Array.from({length: tl.rounds || 0}, (_, i) => i + 1).map(n => { const l = lab[n] || 'ปกติ';
+    return `<span class="${/เทศกาล/.test(l) ? 'fest' : /ใกล้ปิด|สุดท้าย/.test(l) ? 'late' : ''}${n === cur ? ' now' : ''}" title="${esc(l)}">R${n}</span>`; }).join('');
+}
+
+function env() {
+  $('env').innerHTML = Object.entries(D.env).map(([k, v]) => `<tr><td class="small">${esc(k)}</td><td class="small">${esc(v)}</td></tr>`).join('');
+}
+
+function events() {
+  $('logFile').textContent = (D.log_dir || '') + '/decisions.jsonl';
+  const pre = $('events'), atEnd = pre.scrollTop + pre.clientHeight >= pre.scrollHeight - 20;
+  pre.textContent = D.events.slice(-80).map(e => { const x = {...e}; const t = (x.time || '').slice(11); const ev = x.event;
+    delete x.time; delete x.event; delete x.notes; delete x.offers; delete x.tactic;
+    return `${t} ${ev} ${JSON.stringify(x)}`.slice(0, 260); }).join('\n');
+  if (atEnd) pre.scrollTop = pre.scrollHeight;
+}
+
+async function llmCheck() {
+  $('llm').textContent = 'กำลังทดสอบ…';
+  try { const r = await (await fetch('/api/llm')).json(); $('llm').textContent = r.ok ? `ตอบใน ${r.seconds} วิ: ${r.reply}` : 'ใช้ไม่ได้: ' + r.error; }
+  catch (e) { $('llm').textContent = 'ใช้ไม่ได้'; }
+}
+async function poll() {
+  try { D = await (await fetch('/api/live')).json(); render(); } catch (e) {}
+}
+setInterval(() => {
+  if (timerEnd == null) { $('timer').textContent = '--:--'; return; }
+  const s = Math.max(0, Math.round((timerEnd - Date.now()) / 1000));
+  $('timer').textContent = paused ? 'หยุด' : String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0');
+}, 250);
+// ------------------------------------------------------------------ control (settings, checks, agent, hand-in)
+async function post(path, body) {
+  const r = await fetch(path, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body || {})});
+  return r.json();
+}
+function openDlg(id) { $(id).showModal(); }
+function closeDlg(el) { el.closest('dialog').close(); }
+document.querySelectorAll('dialog').forEach(d => d.addEventListener('click', e => { if (e.target === d) d.close(); }));
+function ask(title, text, okLabel, danger) {
+  return new Promise(res => {
+    const d = $('dlgAsk'), ok = $('askOk');
+    if (d.open) d.close();                 // an older question counts as cancelled
+    $('askTitle').textContent = title; $('askText').textContent = text;
+    ok.textContent = okLabel; ok.className = 'btn' + (danger ? ' bad' : '');
+    let yes = false;
+    ok.onclick = () => { yes = true; d.close(); };
+    d.addEventListener('close', () => res(yes), {once: true});
+    d.showModal(); ok.focus();
+  });
+}
+function note(title, text) { return ask(title, text, 'ตกลง').then(() => {}); }
+const chkRow = c => `<div class="chk"><span class="dot ${esc(c.level)}"></span><b>${esc(c.name)}</b><span>${esc(c.detail)}</span></div>`;
+async function runChecks() {
+  $('chkSum').innerHTML = '<span class="muted">กำลังตรวจ…</span>';
+  try {
+    const d = await post('/api/check');
+    const n = l => d.checks.filter(c => c.level === l).length;
+    $('chkTime').textContent = 'ตรวจเมื่อ ' + d.time + (d.competition ? ' · ตลาดแข่ง' : '');
+    $('chkSum').innerHTML = `<span><span class="dot ok"></span>ผ่าน ${n('ok')}</span><span><span class="dot warn"></span>เตือน ${n('warn')}</span><span><span class="dot bad"></span>ไม่ผ่าน ${n('bad')}</span>`;
+    const issues = d.checks.filter(c => c.level !== 'ok');
+    $('checks').innerHTML = issues.length ? issues.map(chkRow).join('') : '<p class="small" style="color:var(--ok);margin:0">พร้อมทุกข้อ</p>';
+    $('checksAll').innerHTML = d.checks.map(chkRow).join('');
+  } catch (e) { $('chkSum').innerHTML = '<span style="color:var(--bad)">ตรวจไม่ได้: หน้า monitor ไม่ตอบ</span>'; }
+}
+async function loadCfg() {
+  const d = await (await fetch('/api/config')).json();
+  $('cfg').innerHTML = d.rows.map(r => {
+    let input;
+    if (r.kind === 'secret') input = `<input type="password" id="cf_${r.key}" autocomplete="off" placeholder="${r.set ? 'ใส่แล้ว (' + r.length + ' ตัว) เว้นว่าง = ใช้ค่าเดิม' : 'ยังไม่ได้ใส่'}">`;
+    else if (r.choices) input = `<select id="cf_${r.key}">` + (r.choices.includes(r.value) ? '' : `<option selected value="${esc(r.value)}">${esc(r.value || '(ว่าง)')}</option>`) +
+      r.choices.map(c => `<option value="${esc(c)}" ${c === r.value ? 'selected' : ''}>${esc(c === '' ? '(ว่าง)' : c)}</option>`).join('') + '</select>';
+    else input = `<input id="cf_${r.key}" value="${esc(r.value)}">`;
+    return `<label for="cf_${r.key}">${esc(r.label)}</label>${input}${r.hint ? `<small>${esc(r.hint)}</small>` : ''}`;
+  }).join('');
+  $('cfgNote').textContent = 'ไฟล์ ' + d.file + ' · log: ' + d.log_dir;
+  $('cfgWhere').textContent = 'log: ' + d.log_dir;
+  const v = Object.fromEntries(d.rows.map(r => [r.key, r]));
+  const val = k => !v[k] ? '–' : v[k].kind === 'secret' ? (v[k].set ? 'ใส่แล้ว' : 'ยังไม่ได้ใส่') : (v[k].value === '' ? '(ว่าง)' : v[k].value);
+  const llm = v.USE_LLM && v.USE_LLM.value === '1' ? 'ใช้ ' + val('LLM_MODEL') : 'ไม่ใช้';
+  $('cfgSum').innerHTML = [['ที่อยู่ตลาด', val('MARKET_URL')], ['key ของทีม', val('TEAM_KEY')],
+    ['กลยุทธ์', `${val('STRATEGY')} · tactic ${val('TACTIC')} · SPEC_P ${val('SPEC_P')} · FREE_TRY ${val('FREE_TRY')}`],
+    ['LLM', llm], ['pattern', val('PATTERN')]].map(([k, x]) => `<b>${esc(k)}</b><span>${esc(x)}</span>`).join('');
+}
+async function openCfg() { await loadCfg(); openDlg('dlgCfg'); }
+async function saveCfg() {
+  const body = {};
+  document.querySelectorAll('[id^=cf_]').forEach(el => { body[el.id.slice(3)] = el.value; });
+  const d = await post('/api/config', body);
+  if (d.error) { $('cfgNote').textContent = d.note; return; }
+  await loadCfg();
+  $('dlgCfg').close();
+  note('บันทึกค่าตั้งแล้ว', 'บันทึก: ' + (d.saved.join(', ') || '-') + ' · ' + d.note);
+  runChecks();
+}
+let agAfter = 0, agLines = [];
+async function agPoll() {
+  try {
+    const d = await (await fetch('/api/agent?after=' + agAfter)).json();
+    agAfter = d.seq; agLines = agLines.concat(d.lines.map(l => l.text)).slice(-200);
+    $('agState').className = 'state ' + (d.running ? 'on' : 'off');
+    $('agState').textContent = d.running ? 'กำลังรัน pid ' + d.pid : d.pid ? 'หยุดแล้ว (exit ' + d.exit + ')' : 'ไม่ได้รันจากหน้านี้';
+    if (agLines.length) {
+      const o = $('agOut'), end = o.scrollTop + o.clientHeight >= o.scrollHeight - 20;
+      o.textContent = agLines.join('\n'); if (end) o.scrollTop = o.scrollHeight;
+    }
+  } catch (e) {}
+}
+async function agStart() {
+  if (D && D.competition && !await ask('เริ่ม agent ในตลาดแข่ง', 'agent จะส่งผลประเมินและข้อเสนอเองทุกรอบจนจบเกม', 'เริ่ม agent')) return;
+  const d = await post('/api/agent/start', {forever: $('agForever').checked && !(D && D.competition)});
+  if (!d.ok) note('เริ่ม agent ไม่ได้', d.error);
+  agPoll();
+}
+async function agStop() {
+  if (!await ask('หยุด agent', 'ช่วงที่หยุดจะไม่มีข้อเสนอจนกว่าจะเริ่มใหม่', 'หยุด agent', true)) return;
+  const d = await post('/api/agent/stop');
+  if (!d.ok) note('หยุด agent ไม่ได้', d.error);
+  agPoll();
+}
+async function pack(send) {
+  if (send && $('packTyped').value !== 'SEND') return;
+  const o = $('packOut'); o.style.display = 'block'; o.textContent = send ? 'กำลังส่ง…' : 'กำลังสร้าง zip…';
+  const d = await post('/api/pack', {send, confirm: send ? 'SEND' : ''});
+  o.textContent = (d.ok ? '' : 'ไม่สำเร็จ\n') + d.output;
+  if (send) { $('packTyped').value = ''; $('packSend').disabled = true; }
+}
+loadCfg(); runChecks(); agPoll(); setInterval(agPoll, 2000);
+poll(); setInterval(poll, 2000);
+</script>
+</body></html>

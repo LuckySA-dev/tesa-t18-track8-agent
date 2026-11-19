@@ -1,0 +1,58 @@
+{
+ "source": "17 Nov practice G1-G3 (bots as competitors)",
+ "buyers": {
+  "สยามคอมเมิร์ซ": {
+   "type": "COMMERCIAL",
+   "base": 1.05,
+   "max_passed": 1.06,
+   "min_above": 1.04,
+   "lo": 1.0237,
+   "hi": 1.0762,
+   "n_rfq": 21
+  },
+  "ชุมพรคั่วบด": {
+   "type": "COMMERCIAL",
+   "base": 1.065,
+   "max_passed": 1.08,
+   "min_above": 1.07,
+   "lo": 1.0384,
+   "hi": 1.0916,
+   "n_rfq": 24
+  },
+  "อินสแตนท์ไทย": {
+   "type": "INSTANT",
+   "base": 0.9475,
+   "max_passed": 0.955,
+   "min_above": 0.94,
+   "lo": 0.9238,
+   "hi": 0.9712,
+   "n_rfq": 19
+  },
+  "ทรีอินวันฟู้ดส์": {
+   "type": "INSTANT",
+   "base": 0.9575,
+   "max_passed": 0.97,
+   "min_above": 0.96,
+   "lo": 0.9336,
+   "hi": 0.9814,
+   "n_rfq": 17
+  }
+ },
+ "types": {
+  "COMMERCIAL": {
+   "lo": 1.0237,
+   "hi": 1.0916
+  },
+  "INSTANT": {
+   "lo": 0.9238,
+   "hi": 0.9814
+  }
+ },
+ "competition": {
+  "busy_offers": 8,
+  "busy_clear": {
+   "COMMERCIAL": 1.03,
+   "INSTANT": 0.9349999999999999
+  }
+ }
+}

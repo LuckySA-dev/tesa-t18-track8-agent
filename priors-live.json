@@ -1,0 +1,76 @@
+{
+ "source": "calibrate_live.py · 18 live games · practice-d18-gap, practice-d18-rules",
+ "types": {
+  "COMMERCIAL": {
+   "lo": 1.0454,
+   "hi": 1.0693
+  },
+  "INSTANT": {
+   "lo": 0.9383,
+   "hi": 0.9614
+  },
+  "SPECIALTY": {
+   "lo": 1.1787,
+   "hi": 1.2387
+  }
+ },
+ "buyers": {
+  "3 สยามคอมเมิร์ซ": {
+   "type": "COMMERCIAL",
+   "lo": 1.0454,
+   "hi": 1.058,
+   "max_passed": 1.045381560043945,
+   "min_above": 1.058,
+   "n_rfq": 47
+  },
+  "4 ชุมพรคั่วบด": {
+   "type": "COMMERCIAL",
+   "lo": 1.0663,
+   "hi": 1.0693,
+   "max_passed": 1.0662819167541098,
+   "min_above": 1.0692553370314337,
+   "n_rfq": 40
+  },
+  "5 อินสแตนท์ไทย": {
+   "type": "INSTANT",
+   "lo": 0.9383,
+   "hi": 0.9614,
+   "max_passed": 0.9383250607244693,
+   "min_above": 0.9613778705636743,
+   "n_rfq": 39
+  },
+  "6 ทรีอินวันฟู้ดส์": {
+   "type": "INSTANT",
+   "lo": 0.9547,
+   "hi": 0.9578,
+   "max_passed": 0.9547405678138414,
+   "min_above": 0.9578108204944465,
+   "n_rfq": 36
+  },
+  "1 ดอยช้างโรสเตอร์": {
+   "type": "SPECIALTY",
+   "lo": 1.1787,
+   "hi": 1.2387,
+   "max_passed": 1.1786814540973505,
+   "min_above": null,
+   "n_rfq": 47
+  },
+  "2 บางกอกบลูม": {
+   "type": "SPECIALTY",
+   "lo": 1.1944,
+   "hi": 1.2208,
+   "max_passed": 1.1943930991990142,
+   "min_above": 1.220764532911106,
+   "n_rfq": 11
+  }
+ },
+ "clear": {
+  "3 สยามคอมเมิร์ซ": 1.01,
+  "4 ชุมพรคั่วบด": 0.99,
+  "5 อินสแตนท์ไทย": 0.945,
+  "6 ทรีอินวันฟู้ดส์": 0.905,
+  "COMMERCIAL": 1.0,
+  "INSTANT": 0.92
+ },
+ "clear_source": "research/k_map.py on logs/practice-d18-rules + practice-d18-gap (253 offers)"
+}
